@@ -33,7 +33,8 @@ Compressão **sem perdas** de imagens em tons de cinza, feita plano de bit por p
 
 ## Requisitos
 
-- Python 3.9 ou superior, com `numpy`, `opencv-python` e `matplotlib`
+- Python **3.12 ou superior** (o `Bit_Planes.py` usa `\` dentro de uma expressão de f-string, o que dá
+  `SyntaxError` em versões anteriores), com `numpy`, `opencv-python` e `matplotlib`
 - `gcc` (ou outro compilador C99) e a biblioteca matemática (`-lm`)
 
 ```bash
@@ -67,7 +68,7 @@ gcc -O2 Decoder.c -o decoder
 
 # 3. Rodar numa imagem (outro caminho funciona do mesmo jeito)
 python3 Bit_Planes.py Kodak/kodim19.png
-python3 Bit_Planes.py DIV2K/0063.png
+python3 Bit_Planes.py DIV2K/0063.png   # DIV2K não vem no repositório (ver abaixo)
 
 # Opcional: mostra o log completo do encoder e do decoder para cada plano
 python3 Bit_Planes.py Kodak/kodim19.png --detalhe
@@ -75,14 +76,31 @@ python3 Bit_Planes.py Kodak/kodim19.png --detalhe
 
 O `Bit_Planes.py` separa a imagem em planos, comprime e decodifica cada um, confere se o resultado é
 idêntico ao original e imprime uma tabela com uma coluna por plano e uma coluna `TOTAL`.
-Ele também cria `plano_bit_N.txt`, `plano_bit_N_encoded.bin`, `saida_N.txt` e `resultado_planos_bits.png`.
+Sem argumento, ele procura `foto.png` na pasta atual.
+Ele também cria, na raiz do projeto, `plano_bit_N.txt`, `plano_bit_N_encoded.bin`, `saida_N.txt` e
+`resultado_planos_bits.png`. Esses arquivos (e os executáveis `encoder` e `decoder`) estão no `.gitignore`.
+
+### Exemplo de resultado (`Kodak/kodim19.png`, 768×512, `BLOCK_SIZE` = 10000)
+
+| Plano | 0 a 4 | 5 | 6 | 7 | **Total** |
+|---|---|---|---|---|---|
+| Modo | RAW | L=10 | L=10 | L=10 | — |
+| Comprimido (bits) | 393.296 cada | 308.792 | 239.968 | 121.392 | **2.636.632** |
+| Taxa de compressão | −0,02% | 21,47% | 38,97% | 69,13% | **16,18%** |
+
+Os planos 0 a 4 ficam em RAW porque o tANS não os deixa menores. O custo é só o cabeçalho de 80 bits.
+Os 8 planos passam na verificação lossless.
 
 ### Rodar o encoder e o decoder em C diretamente
 
 ```bash
 ./encoder plano_bit_7.txt                              # gera plano_bit_7_encoded.bin
+./encoder plano_bit_6.txt plano_bit_7.txt              # aceita vários arquivos de uma vez
 ./decoder plano_bit_7_encoded.bin saida_7.txt          # reconstrói a sequência
 ```
+
+O decoder é compilado com `DEBUG 1` (`Decoder.c`) e imprime um log por bloco. O encoder vem com `DEBUG 0`.
+Mude o `#define DEBUG` e recompile para ligar ou desligar.
 
 ### Versão Python (rANS de referência)
 
@@ -91,7 +109,7 @@ Ele também cria `plano_bit_N.txt`, `plano_bit_N_encoded.bin`, `saida_N.txt` e `
 python3 "ANS-Streaming Encoder.py" --input input.txt --output comprimido.bin --recalc-window 1000
 python3 ANS-Streaming-Decoder.py --encoded comprimido.bin --output saida.txt --verify input.txt
 
-# Rodar todos os arquivos de inputs/ e de Plano_de_Bits/ e imprimir uma tabela comparativa
+# Rodar todos os arquivos de inputs/ (se existir) e de Plano_de_Bits/ e imprimir uma tabela comparativa
 python3 run_all.py --recalc-window 1000
 ```
 
@@ -110,10 +128,12 @@ Projeto-ANS-main/
 ├── Decoder.c                  Decoder tANS (C)
 ├── tans_tables.h              Tabelas do tANS (GERADO: não editar à mão)
 ├── Kodak/                     Imagens de teste (kodim01 a kodim24)
-├── DIV2K/                     Imagens de teste maiores
-├── inputs/                    Sequências de 0s e 1s (input_1.txt a input_8.txt)
-└── Plano_de_Bits/             Planos de bits já extraídos (plano_bit_0.txt a plano_bit_7.txt)
+├── Plano_de_Bits/             Planos de bits já extraídos (plano_bit_0.txt a plano_bit_7.txt)
+├── DIV2K/                     Imagens maiores (ignorada pelo git: baixe à parte)
+└── inputs/                    Opcional: input_1.txt a input_8.txt para o run_all.py (não versionada)
 ```
+
+O `run_all.py` avisa e pula os arquivos de `inputs/` que não encontrar.
 
 ---
 
